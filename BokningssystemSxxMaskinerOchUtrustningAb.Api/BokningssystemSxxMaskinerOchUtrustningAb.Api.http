@@ -1,6 +1,0 @@
-@BokningssystemSxxMaskinerOchUtrustningAb.Api_HostAddress = http://localhost:5218
-
-GET {{BokningssystemSxxMaskinerOchUtrustningAb.Api_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###

@@ -1,5 +1,5 @@
 @startuml
-title US-16 - Skapa bokning v2 (Application)
+title US-16 - Skapa bokning
 skinparam shadowing false
 autonumber
 
@@ -14,8 +14,7 @@ Client -> View : Välj modell och datum samt bekräfta bokning
 View -> Controller : CreateBooking(request)\nPOST /bookings
 Controller -> Service : CreateBooking(customerId, request)
 activate Service
-Service -> Service : Validera kund, modell, period och överenskommet pris
-ValidateBookingPeriod(startDate, endDate)
+Service -> Service : Validera kund, modell, period och överenskommet pris\nValidateBookingPeriod(startDate, endDate)
 
 alt Ogiltiga indata
   Service --> Controller : BookingResult(false, felmeddelande, null)
@@ -40,7 +39,8 @@ else Giltiga indata
     Service -> Repository : TrySaveBooking(booking)
     activate Repository
     critical Databasskyddad slutkontroll och sparande
-      Repository -> Database : Kontrollera att exemplaret fortfarande är bokningsbart\noch att perioden är ledig; spara endast om kontrollen lyckas
+      Repository -> Database : Kontrollera unikt id och bokningsnummer
+      Repository -> Database : Kontrollera bokningsbart exemplar och ledig period\nenligt bokningsreglerna; spara endast om kontrollen lyckas
       Database --> Repository : Sparad eller tillgänglighetskonflikt
     end
     Repository --> Service : true eller false
@@ -57,16 +57,4 @@ else Giltiga indata
   end
 end
 deactivate Service
-note over Controller, Service
-  CreateBookingRequest innehåller ModelId, StartDate, EndDate och AgreedTotalPrice.
-  Prisberäkning ligger utanför US-16; ett färdigt pris tillförs från prisflödet.
-  Framtida API får inte lita på ett godtyckligt pris från klienten.
-  BookingResult har även Error: InvalidRequest eller Unavailable.
-  TimeProvider gör dagens datum testbart.
-end note
-legend bottom
-  I denna iteration är endast Application och Domain implementerade.
-  Repositoryt ersätts med NSubstitute i tjänstetesterna.
-  Vy, controller och databas visas som målbild och implementeras senare.
-endlegend
 @enduml

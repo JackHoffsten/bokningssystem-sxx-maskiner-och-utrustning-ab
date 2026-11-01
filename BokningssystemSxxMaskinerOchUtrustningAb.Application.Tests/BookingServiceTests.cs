@@ -27,11 +27,11 @@ public class BookingServiceTests
     }
 
     [Fact]
-    public void Creates_and_returns_booking_with_customer_item_period_and_agreed_price()
+    public void Creates_And_Returns_Booking_With_Customer_Item_Period_And_Agreed_Price()
     {
         var item = Item();
         repository.GetItemsAndBookings(modelId).Returns(new BookingAvailability([item], []));
-        var request = Request(1, 1); // Start idag och endagsbokning är giltiga.
+        var request = Request(1, 1);
 
         var result = service.CreateBooking(customerId, request);
 
@@ -57,7 +57,7 @@ public class BookingServiceTests
     [Theory]
     [InlineData(0, 1)]
     [InlineData(3, 2)]
-    public void Invalid_dates_do_not_call_repository(int startDay, int endDay)
+    public void Invalid_Dates_Do_Not_Call_Repository(int startDay, int endDay)
     {
         AssertInvalid(service.CreateBooking(customerId, Request(startDay, endDay)));
         Assert.Empty(repository.ReceivedCalls());
@@ -66,7 +66,7 @@ public class BookingServiceTests
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public void Missing_customer_or_model_does_not_call_repository(bool missingCustomer)
+    public void Missing_Customer_Or_Model_Does_Not_Call_Repository(bool missingCustomer)
     {
         var request = missingCustomer ? Request(2, 3) : Request(2, 3) with { ModelId = Guid.Empty };
         AssertInvalid(service.CreateBooking(missingCustomer ? Guid.Empty : customerId, request));
@@ -74,21 +74,21 @@ public class BookingServiceTests
     }
 
     [Fact]
-    public void Negative_agreed_price_does_not_call_repository()
+    public void Negative_Agreed_Price_Does_Not_Call_Repository()
     {
         AssertInvalid(service.CreateBooking(customerId, Request(2, 3) with { AgreedTotalPrice = -1m }));
         Assert.Empty(repository.ReceivedCalls());
     }
 
     [Fact]
-    public void No_items_returns_unavailable_without_saving()
+    public void No_Items_Returns_Unavailable_Without_Saving()
     {
         AssertUnavailable(service.CreateBooking(customerId, Request(2, 3)));
         repository.DidNotReceive().TrySaveBooking(Arg.Any<Booking>());
     }
 
     [Fact]
-    public void Unbookable_or_wrong_model_items_are_not_selected()
+    public void Unbookable_Or_Wrong_Model_Items_Are_Not_Selected()
     {
         repository.GetItemsAndBookings(modelId).Returns(new BookingAvailability([
             Item(isBookable: false), new EquipmentItem(Guid.NewGuid(), "OTHER", Guid.NewGuid())], []));
@@ -98,7 +98,7 @@ public class BookingServiceTests
     }
 
     [Fact]
-    public void Selects_another_available_item_of_requested_model()
+    public void Selects_Another_Available_Item_Of_Requested_Model()
     {
         var first = Item();
         var second = Item();
@@ -113,7 +113,7 @@ public class BookingServiceTests
     }
 
     [Fact]
-    public void Overlapping_booking_blocks_item_without_saving()
+    public void Overlapping_Booking_Blocks_Item_Without_Saving()
     {
         var item = Item();
         repository.GetItemsAndBookings(modelId).Returns(new BookingAvailability([item], [ExistingBooking(item, 2, 3)]));
@@ -123,10 +123,10 @@ public class BookingServiceTests
     }
 
     [Theory]
-    [InlineData(5, false)] // Lördag efter fredag.
-    [InlineData(6, false)] // Söndag efter fredag.
-    [InlineData(7, true)]  // Måndag.
-    public void Uses_domain_friday_rule_when_selecting_item(int startDay, bool expectedSuccess)
+    [InlineData(5, false)]
+    [InlineData(6, false)]
+    [InlineData(7, true)]
+    public void Uses_Domain_Friday_Rule_When_Selecting_Item(int startDay, bool expectedSuccess)
     {
         var item = Item();
         repository.GetItemsAndBookings(modelId).Returns(new BookingAvailability([item], [ExistingBooking(item, 3, 4)]));
@@ -138,7 +138,7 @@ public class BookingServiceTests
     }
 
     [Fact]
-    public void Cancelled_booking_does_not_prevent_creation()
+    public void Cancelled_Booking_Does_Not_Prevent_Creation()
     {
         var item = Item();
         repository.GetItemsAndBookings(modelId).Returns(new BookingAvailability([item],
@@ -148,7 +148,7 @@ public class BookingServiceTests
     }
 
     [Fact]
-    public void Failed_final_save_returns_conflict_without_confirmation()
+    public void Failed_Final_Save_Returns_Conflict_Without_Confirmation()
     {
         repository.GetItemsAndBookings(modelId).Returns(new BookingAvailability([Item()], []));
         repository.TrySaveBooking(Arg.Any<Booking>()).Returns(false);
@@ -161,7 +161,7 @@ public class BookingServiceTests
     }
 
     [Fact]
-    public void Separate_bookings_receive_different_ids_and_numbers()
+    public void Separate_Bookings_Receive_Different_Ids_And_Numbers()
     {
         repository.GetItemsAndBookings(modelId).Returns(new BookingAvailability([Item()], []));
 
@@ -176,7 +176,7 @@ public class BookingServiceTests
     }
 
     [Fact]
-    public void Storage_errors_are_not_reported_as_unavailable_equipment()
+    public void Storage_Errors_Are_Not_Reported_As_Unavailable_Equipment()
     {
         repository.GetItemsAndBookings(modelId).Returns(new BookingAvailability([Item()], []));
         repository.TrySaveBooking(Arg.Any<Booking>()).Throws(new InvalidOperationException("Storage error"));
@@ -185,7 +185,7 @@ public class BookingServiceTests
     }
 
     [Fact]
-    public void Today_uses_the_time_providers_local_calendar_date()
+    public void Today_Uses_The_Time_Providers_Local_Calendar_Date()
     {
         clock.GetUtcNow().Returns(new DateTimeOffset(2029, 12, 31, 23, 30, 0, TimeSpan.Zero));
         clock.LocalTimeZone.Returns(TimeZoneInfo.CreateCustomTimeZone("Test UTC+1", TimeSpan.FromHours(1), "Test", "Test"));

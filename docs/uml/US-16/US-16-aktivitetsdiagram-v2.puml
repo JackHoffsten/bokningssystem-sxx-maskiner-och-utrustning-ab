@@ -1,5 +1,5 @@
 @startuml
-title US-16 - Skapa bokning v2 (Application)
+title US-16 - Skapa bokning
 skinparam shadowing false
 
 |Kund|
@@ -34,9 +34,14 @@ och färdigt överenskommet pris;
     if (Ledigt exemplar finns?) then (ja)
       :Skapa bekräftad bokning med kund,
       exemplar, period och unikt bokningsnummer;
-      :Begär atomär slutkontroll och sparande via repositoryt;
+      :Begär slutkontroll och sparande via repositoryt;
+      note right
+        I en databasskyddad operation kontrolleras unika id:n och nummer,
+        bokningsbart exemplar samt ledig period före sparande.
+        Dubblett av id eller nummer ger ett separat fel.
+      end note
       if (Sparandet lyckades?) then (ja)
-        :Bokningen är sparad;
+        :Bokningen är sparad i databasen;
       else (nej)
         :Returnera begripligt fel om sen tillgänglighetskonflikt (409);
         stop
@@ -61,4 +66,5 @@ else (nej)
   :Avvisa anropet (401);
   stop
 endif
+
 @enduml
