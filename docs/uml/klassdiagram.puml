@@ -64,7 +64,8 @@ package "Domain" {
     + EndDate : DateOnly
     + AgreedTotalPrice : decimal
     + Status : BookingStatus
-    + Booking(id : Guid, bookingNumber : string, customerId : Guid, equipmentItemId : Guid, startDate : DateOnly, endDate : DateOnly, agreedTotalPrice : decimal)
+    + Booking(id : Guid, bookingNumber : string, customerId : Guid, equipmentItemId : Guid, startDate : DateOnly, endDate : DateOnly, agreedTotalPrice : decimal, status : BookingStatus = Confirmed)
+    + BlocksPeriodFor(customerId : Guid, startDate : DateOnly, endDate : DateOnly) : bool
   }
   enum BookingStatus {
     Confirmed

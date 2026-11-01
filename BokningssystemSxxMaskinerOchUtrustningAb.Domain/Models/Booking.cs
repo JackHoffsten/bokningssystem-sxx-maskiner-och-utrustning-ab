@@ -14,7 +14,8 @@ public class Booking
     public BookingStatus Status { get; private set; }
 
     public Booking(Guid id, string bookingNumber, Guid customerId, Guid equipmentItemId,
-        DateOnly startDate, DateOnly endDate, decimal agreedTotalPrice)
+        DateOnly startDate, DateOnly endDate, decimal agreedTotalPrice,
+        BookingStatus status = BookingStatus.Confirmed)
     {
         if (id == Guid.Empty)
             throw new ArgumentException("Bokningens id måste anges.", nameof(id));
@@ -27,6 +28,8 @@ public class Booking
             throw new ArgumentException("Slutdatum får inte vara före startdatum.", nameof(endDate));
         if (agreedTotalPrice < 0)
             throw new ArgumentOutOfRangeException(nameof(agreedTotalPrice), "Totalpriset får inte vara negativt.");
+        if (!Enum.IsDefined(status))
+            throw new ArgumentOutOfRangeException(nameof(status), "Bokningsstatusen är ogiltig.");
 
         Id = id;
         BookingNumber = bookingNumber;
@@ -35,6 +38,31 @@ public class Booking
         StartDate = startDate;
         EndDate = endDate;
         AgreedTotalPrice = agreedTotalPrice;
-        Status = BookingStatus.Confirmed;
+        Status = status;
     }
+
+    public bool BlocksPeriodFor(Guid customerId, DateOnly startDate, DateOnly endDate)
+    {
+        if (customerId == Guid.Empty)
+            throw new ArgumentException("Kundens id måste anges.", nameof(customerId));
+        if (endDate < startDate)
+            throw new ArgumentException("Slutdatum får inte vara före startdatum.", nameof(endDate));
+
+        if (Status == BookingStatus.Cancelled)
+            return false;
+
+        if (StartDate <= endDate && startDate <= EndDate)
+            return true;
+
+        if (CustomerId == customerId)
+            return false;
+
+        return BlocksWeekendAfterFriday(EndDate, startDate)
+            || BlocksWeekendAfterFriday(endDate, StartDate);
+    }
+
+    private static bool BlocksWeekendAfterFriday(DateOnly earlierEnd, DateOnly laterStart) =>
+        earlierEnd.DayOfWeek == DayOfWeek.Friday
+        && laterStart.DayNumber > earlierEnd.DayNumber
+        && laterStart.DayNumber - earlierEnd.DayNumber < 3;
 }
