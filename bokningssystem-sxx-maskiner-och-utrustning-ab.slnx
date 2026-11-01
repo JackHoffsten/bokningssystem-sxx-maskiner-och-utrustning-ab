@@ -4,4 +4,5 @@
   <Project Path="BokningssystemSxxMaskinerOchUtrustningAb.Application/BokningssystemSxxMaskinerOchUtrustningAb.Application.csproj" />
   <Project Path="BokningssystemSxxMaskinerOchUtrustningAb.Infrastructure/BokningssystemSxxMaskinerOchUtrustningAb.Infrastructure.csproj" />
   <Project Path="BokningssystemSxxMaskinerOchUtrustningAb.Domain.Tests/BokningssystemSxxMaskinerOchUtrustningAb.Domain.Tests.csproj" />
+  <Project Path="BokningssystemSxxMaskinerOchUtrustningAb.Application.Tests/BokningssystemSxxMaskinerOchUtrustningAb.Application.Tests.csproj" />
 </Solution>

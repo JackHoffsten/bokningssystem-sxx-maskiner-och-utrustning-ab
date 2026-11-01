@@ -1,0 +1,64 @@
+@startuml
+title US-16 - Skapa bokning v2 (Application)
+skinparam shadowing false
+
+|Kund|
+start
+:Välj utrustningsmodell;
+:Ange startdatum och slutdatum;
+:Bekräfta bokning;
+
+|Bokningssystem|
+:Kontrollera kundidentitet;
+if (Autentiserad kund?) then (ja)
+  :Validera kund, modell, bokningsperiod
+och färdigt överenskommet pris;
+  note right
+    Startdatum >= dagens datum.
+    Slutdatum >= startdatum.
+    Båda dagarna ingår i perioden.
+    Kund och modell måste anges.
+    Priset får inte vara negativt.
+  end note
+  if (Giltiga indata?) then (ja)
+    :Hämta exemplar och befintliga bokningar
+    för vald modell från databasen;
+    :Sök bokningsbart exemplar för hela perioden;
+    note right
+      Kontrollera hela perioden mot aktiva bokningar.
+      Avbokade bokningar blockerar inte.
+      Efter en bokning till fredag får en annan
+      kund tidigast boka exemplaret från måndag.
+      Kontrollera regeln oavsett bokningarnas skapandeordning.
+    end note
+    if (Ledigt exemplar finns?) then (ja)
+      :Skapa bekräftad bokning med kund,
+      exemplar, period och unikt bokningsnummer;
+      :Begär atomär slutkontroll och sparande via repositoryt;
+      if (Sparandet lyckades?) then (ja)
+        :Bokningen är sparad;
+      else (nej)
+        :Returnera begripligt fel om sen tillgänglighetskonflikt (409);
+        stop
+      endif
+      :Returnera bokningsbekräftelse (201);
+      |Kund|
+      :Ta emot bokningsnummer och bokningsuppgifter;
+      stop
+    else (nej)
+      |Bokningssystem|
+      :Ingen bokning skapas;
+      :Returnera begripligt fel:
+      ingen utrustning tillgänglig (409);
+      stop
+    endif
+  else (nej)
+    :Returnera begripligt fel:
+    ogiltiga indata (400);
+    stop
+  endif
+else (nej)
+  :Avvisa anropet (401);
+  stop
+endif
+@enduml

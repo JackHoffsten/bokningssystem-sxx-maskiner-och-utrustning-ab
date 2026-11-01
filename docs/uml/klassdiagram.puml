@@ -16,22 +16,38 @@ package "Application" {
     + ModelId : Guid
     + StartDate : DateOnly
     + EndDate : DateOnly
+    + AgreedTotalPrice : decimal
   }
 
   class BookingResult {
     + Success : bool
     + Message : string
     + Booking : Booking?
+    + Error : BookingError?
   }
 
   class BookingService {
     - bookingRepository : IBookingRepository
+    - timeProvider : TimeProvider
     + CreateBooking(customerId : Guid, request : CreateBookingRequest) : BookingResult
     - ValidateBookingPeriod(startDate : DateOnly, endDate : DateOnly) : bool
+    - FindAvailableItem(availability : BookingAvailability, customerId : Guid, request : CreateBookingRequest) : EquipmentItem?
+    - GenerateBookingNumber() : string
   }
 
   interface IBookingRepository {
-    + TryCreateBooking(customerId : Guid, modelId : Guid, startDate : DateOnly, endDate : DateOnly) : Booking?
+    + GetItemsAndBookings(modelId : Guid) : BookingAvailability
+    + TrySaveBooking(booking : Booking) : bool
+  }
+
+  class BookingAvailability {
+    + Items : IReadOnlyList<EquipmentItem>
+    + Bookings : IReadOnlyList<Booking>
+  }
+
+  enum BookingError {
+    InvalidRequest
+    Unavailable
   }
 }
 
@@ -77,9 +93,8 @@ package "Domain" {
 
 package "Infrastructure" {
   class BookingRepository {
-    + TryCreateBooking(customerId : Guid, modelId : Guid, startDate : DateOnly, endDate : DateOnly) : Booking?
-    - FindAvailableItem(customerId : Guid, modelId : Guid, startDate : DateOnly, endDate : DateOnly) : EquipmentItem?
-    - GenerateBookingNumber() : string
+    + GetItemsAndBookings(modelId : Guid) : BookingAvailability
+    + TrySaveBooking(booking : Booking) : bool
   }
 
 }
@@ -92,8 +107,10 @@ BookingService ..> CreateBookingRequest
 BookingService ..> BookingResult
 BookingResult --> "0..1" Booking
 BookingRepository ..|> IBookingRepository
-BookingRepository ..> Booking : skapar och kontrollerar
-BookingRepository ..> EquipmentItem : väljer
+BookingService ..> Booking : skapar
+BookingService ..> BookingAvailability
+BookingRepository ..> Booking : kontrollerar och sparar
+BookingRepository ..> EquipmentItem : hämtar
 Customer "1" -- "0..*" Booking : gör
 EquipmentModel "1" -- "0..*" EquipmentItem : har
 EquipmentItem "1" -- "0..*" Booking : bokas genom
