@@ -1,0 +1,101 @@
+@startuml
+title Bokningssystem SXX Maskiner och Utrustning AB - Klassdiagram
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+hide empty members
+
+package "API" {
+  class BookingController {
+    - bookingService : BookingService
+    + CreateBooking(request : CreateBookingRequest) : ActionResult<BookingResult>
+  }
+}
+
+package "Application" {
+  class CreateBookingRequest {
+    + ModelId : Guid
+    + StartDate : DateOnly
+    + EndDate : DateOnly
+  }
+
+  class BookingResult {
+    + Success : bool
+    + Message : string
+    + Booking : Booking?
+  }
+
+  class BookingService {
+    - bookingRepository : IBookingRepository
+    + CreateBooking(customerId : Guid, request : CreateBookingRequest) : BookingResult
+    - ValidateBookingPeriod(startDate : DateOnly, endDate : DateOnly) : bool
+  }
+
+  interface IBookingRepository {
+    + TryCreateBooking(customerId : Guid, modelId : Guid, startDate : DateOnly, endDate : DateOnly) : Booking?
+  }
+}
+
+package "Domain" {
+  class Customer {
+    + Id : Guid
+    + Customer(id : Guid)
+  }
+  class EquipmentModel {
+    + Id : Guid
+    + Name : string
+    + Description : string
+    + Category : string
+    + DailyPrice : decimal
+    + EquipmentModel(id : Guid, name : string, description : string, category : string, dailyPrice : decimal)
+  }
+  class EquipmentItem {
+    + Id : Guid
+    + InventoryNumber : string
+    + EquipmentModelId : Guid
+    + IsBookable : bool
+    + EquipmentItem(id : Guid, inventoryNumber : string, equipmentModelId : Guid, isBookable : bool = true)
+  }
+  class Booking {
+    + Id : Guid
+    + BookingNumber : string
+    + CustomerId : Guid
+    + EquipmentItemId : Guid
+    + StartDate : DateOnly
+    + EndDate : DateOnly
+    + AgreedTotalPrice : decimal
+    + Status : BookingStatus
+    + Booking(id : Guid, bookingNumber : string, customerId : Guid, equipmentItemId : Guid, startDate : DateOnly, endDate : DateOnly, agreedTotalPrice : decimal)
+  }
+  enum BookingStatus {
+    Confirmed
+    Cancelled
+    CheckedOut
+    Returned
+  }
+}
+
+package "Infrastructure" {
+  class BookingRepository {
+    + TryCreateBooking(customerId : Guid, modelId : Guid, startDate : DateOnly, endDate : DateOnly) : Booking?
+    - FindAvailableItem(customerId : Guid, modelId : Guid, startDate : DateOnly, endDate : DateOnly) : EquipmentItem?
+    - GenerateBookingNumber() : string
+  }
+
+}
+
+BookingController --> BookingService
+BookingController ..> CreateBookingRequest
+BookingController ..> BookingResult
+BookingService --> IBookingRepository
+BookingService ..> CreateBookingRequest
+BookingService ..> BookingResult
+BookingResult --> "0..1" Booking
+BookingRepository ..|> IBookingRepository
+BookingRepository ..> Booking : skapar och kontrollerar
+BookingRepository ..> EquipmentItem : väljer
+Customer "1" -- "0..*" Booking : gör
+EquipmentModel "1" -- "0..*" EquipmentItem : har
+EquipmentItem "1" -- "0..*" Booking : bokas genom
+Booking --> BookingStatus
+
+@enduml

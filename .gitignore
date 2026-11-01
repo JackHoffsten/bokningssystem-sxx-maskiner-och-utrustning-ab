@@ -3,6 +3,5 @@
 **/obj/
 **/TestResults/
 /docs/US-16/
-/docs/uml/US-16/
 *.user
 *.suo

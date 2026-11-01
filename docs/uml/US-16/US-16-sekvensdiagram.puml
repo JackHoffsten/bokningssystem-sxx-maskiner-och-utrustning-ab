@@ -1,0 +1,59 @@
+@startuml
+title US-16 - Skapa bokning
+skinparam shadowing false
+autonumber
+
+actor "Kund" as Client
+boundary "BookingView" as View
+boundary "BookingController" as Controller
+control "BookingService" as Service
+participant "BookingRepository" as Repository
+database "Databas" as Database
+
+Client -> View : Välj modell och datum samt bekräfta bokning
+View -> Controller : CreateBooking(request)\nPOST /bookings
+Controller -> Service : CreateBooking(customerId, request)
+activate Service
+Service -> Service : ValidateBookingPeriod(startDate, endDate)
+
+alt Ogiltig period
+  Service --> Controller : BookingResult(false, felmeddelande, null)
+  Controller --> View : 400 Bad Request + felmeddelande
+  View --> Client : Visa felmeddelande om ogiltig period
+else Giltig period
+  Service -> Repository : GetItemsAndBookings(modelId)
+  activate Repository
+  Repository -> Database : Hämta exemplar och befintliga bokningar för modellen
+  Database --> Repository : Exemplar och bokningar
+  Repository --> Service : Exemplar och bokningar
+  deactivate Repository
+  Service -> Service : FindAvailableItem(customerId, modelId, startDate, endDate)
+
+  alt Inget ledigt exemplar
+    Service --> Controller : BookingResult(false, felmeddelande, null)
+    Controller --> View : 409 Conflict + felmeddelande
+    View --> Client : Visa att utrustningen inte är tillgänglig
+  else Ledigt exemplar finns
+    Service -> Service : GenerateBookingNumber()
+    Service -> Service : Skapa bokningsobjekt
+    Service -> Repository : TrySaveBooking(booking)
+    activate Repository
+    critical Databasskyddad slutkontroll och sparande
+      Repository -> Database : Kontrollera att exemplaret fortfarande är bokningsbart\noch att perioden är ledig; spara endast om kontrollen lyckas
+      Database --> Repository : Sparad eller tillgänglighetskonflikt
+    end
+    Repository --> Service : true eller false
+    deactivate Repository
+    alt Bokning sparad
+      Service --> Controller : BookingResult(true, "Bokning skapad", booking)
+      Controller --> View : 201 Created + bokningsuppgifter
+      View --> Client : Visa bokningsbekräftelse och bokningsnummer
+    else Exemplaret hann bli otillgängligt
+      Service --> Controller : BookingResult(false, felmeddelande, null)
+      Controller --> View : 409 Conflict + felmeddelande
+      View --> Client : Visa att bokningen inte kunde genomföras
+    end
+  end
+end
+deactivate Service
+@enduml
