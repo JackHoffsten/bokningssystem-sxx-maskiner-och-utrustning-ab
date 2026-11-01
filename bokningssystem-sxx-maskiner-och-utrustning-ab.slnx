@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="BokningssystemSxxMaskinerOchUtrustningAb.Api/BokningssystemSxxMaskinerOchUtrustningAb.Api.csproj" />
+  <Project Path="BokningssystemSxxMaskinerOchUtrustningAb.Domain/BokningssystemSxxMaskinerOchUtrustningAb.Domain.csproj" />
+  <Project Path="BokningssystemSxxMaskinerOchUtrustningAb.Application/BokningssystemSxxMaskinerOchUtrustningAb.Application.csproj" />
+  <Project Path="BokningssystemSxxMaskinerOchUtrustningAb.Infrastructure/BokningssystemSxxMaskinerOchUtrustningAb.Infrastructure.csproj" />
+</Solution>
