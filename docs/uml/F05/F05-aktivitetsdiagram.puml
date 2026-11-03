@@ -1,0 +1,47 @@
+@startuml
+title F05 – Aktivitetsdiagram: Avboka bokning
+
+skinparam shadowing false
+
+start
+
+:Kunden öppnar Mina bokningar;
+:Kunden väljer en bokning;
+:Kunden klickar på Avboka;
+
+:Systemet hämtar bokningen;
+
+if (Tillhör bokningen kunden?) then (Ja)
+
+    if (Är bokningen redan avbokad?) then (Ja)
+        :Visa att bokningen redan är avbokad;
+        stop
+    else (Nej)
+
+        if (Har uthyrningen påbörjats?) then (Ja)
+            :Neka avbokning;
+            :Visa att påbörjad uthyrning inte kan avbokas;
+            stop
+        else (Nej)
+
+            if (Sker avbokningen senast dagen före start?) then (Ja)
+                :Ändra bokningens status till Cancelled;
+                :Spara avbokningen;
+                :Frigör exemplarets reserverade period;
+                :Visa bekräftelse för kunden;
+                stop
+            else (Nej)
+                :Neka självavbokning;
+                :Hänvisa kunden till personalen;
+                stop
+            endif
+
+        endif
+    endif
+
+else (Nej)
+    :Neka åtkomst till bokningen;
+    stop
+endif
+
+@enduml
