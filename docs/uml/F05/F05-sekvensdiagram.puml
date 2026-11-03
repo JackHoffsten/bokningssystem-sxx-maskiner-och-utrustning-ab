@@ -1,0 +1,106 @@
+@startuml
+title F05 - Sekvensdiagram: Avboka bokning
+
+autonumber
+hide footbox
+
+skinparam shadowing false
+
+actor Kund
+boundary BookingView
+boundary BookingController
+control BookingService
+participant "IBookingRepository" as Repository
+database Databas
+
+Kund -> BookingView : Klickar på Avboka
+
+BookingView -> BookingController : CancelBooking(bookingId)
+
+BookingController -> BookingService : CancelBooking(customerId, bookingId)
+
+BookingService -> Repository : GetById(bookingId)
+
+Repository -> Databas : Hämta bokning
+
+Databas --> Repository : Bokning eller saknas
+
+Repository --> BookingService : Booking eller null
+
+BookingService -> BookingService : Kontrollera avbokningsregler
+
+alt Bokningen saknas eller tillhör inte kunden
+
+    BookingService --> BookingController : Misslyckad (åtkomst nekad)
+
+    BookingController --> BookingView : Visa felmeddelande
+
+    BookingView --> Kund : Avbokning nekad
+
+else Bokningen är redan avbokad
+
+    BookingService --> BookingController : Misslyckad (redan avbokad)
+
+    BookingController --> BookingView : Visa felmeddelande
+
+    BookingView --> Kund : Bokningen är redan avbokad
+
+else Uthyrningen har påbörjats
+
+    BookingService --> BookingController : Misslyckad (uthyrning påbörjad)
+
+    BookingController --> BookingView : Visa felmeddelande
+
+    BookingView --> Kund : Påbörjad uthyrning kan inte avbokas
+
+else Avbokningen sker för sent
+
+    BookingService --> BookingController : Misslyckad (för sent)
+
+    BookingController --> BookingView : Visa felmeddelande
+
+    BookingView --> Kund : Kontakta personalen
+
+else Avbokningen är tillåten
+
+    BookingService -> Repository : UpdateBooking(status = Cancelled)
+
+    Repository -> Databas : Spara ändrad bokning
+
+    alt Sparningen lyckades
+
+        Databas --> Repository : Sparad
+
+        Repository --> BookingService : Uppdatering lyckades
+
+        note right of BookingService
+          Bokningen får status Cancelled.
+          Den finns kvar i historiken.
+
+          Den avbokade bokningen blockerar
+          inte längre utrustningens period.
+        end note
+
+        BookingService --> BookingController : Lyckad avbokning
+
+        BookingController --> BookingView : Visa bekräftelse
+
+        BookingView --> Kund : Bokningen är avbokad
+
+    else Sparningen misslyckades
+
+        Databas --> Repository : Fel vid sparning
+
+        Repository --> BookingService : Uppdatering misslyckades
+
+        BookingService --> BookingController : Misslyckad avbokning
+
+        BookingController --> BookingView : Visa felmeddelande
+
+        BookingView --> Kund : Avbokningen kunde inte sparas
+
+    end
+
+end
+
+@enduml
