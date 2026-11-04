@@ -54,7 +54,11 @@ package "Application" {
 package "Domain" {
   class Customer {
     + Id : Guid
-    + Customer(id : Guid)
+    + Name : string
+    + OrganizationNumber : string
+    + Email : string
+    + PhoneNumber : string
+    + Customer(id : Guid, name : string, organizationNumber : string, email : string, phoneNumber : string)
   }
   class EquipmentModel {
     + Id : Guid
