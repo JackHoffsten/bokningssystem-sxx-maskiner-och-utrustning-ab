@@ -1,0 +1,111 @@
+
+@startuml
+title US-34 - Registrera utlämning (inkl. US-35 och US-36)
+
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+autonumber
+
+actor "Personal" as Personal
+participant "Bokningssystem" as System
+participant "Utlämningstjänst" as Service
+database "Databas" as DB
+
+== 1. Sök efter bokning ==
+
+Personal -> System : Sök bokning(bokningsnummer)
+activate System
+
+System -> Service : Hämta bokning(bokningsnummer)
+activate Service
+
+Service -> DB : Hämta bokning(bokningsnummer)
+activate DB
+DB --> Service : Bokning eller null
+deactivate DB
+
+Service --> System : Bokning eller null
+deactivate Service
+
+alt Bokningen saknas
+    System --> Personal : Visa "Bokningen hittades inte"
+
+else Bokningen finns
+    System --> Personal : Visa bokningsuppgifter
+
+    == 2. Kontrollera bokningsstatus ==
+
+    alt Status är inte Confirmed
+        System --> Personal : Visa "Bokningen kan inte lämnas ut"
+
+    else Status är Confirmed
+        System --> Personal : Visa bokning redo för utlämning
+
+        == 3. Registrera utlämning ==
+
+        Personal -> System : Ange inventarienummer
+        Personal -> System : Bekräfta utlämning
+
+        note over System
+          PersonalId hämtas från
+          den inloggade användaren.
+        end note
+
+        System -> Service : RegistreraUtlämning(bokningsnummer, inventarienummer, personalId)
+        activate Service
+
+        Service -> DB : Hämta aktuell bokning och exemplar
+        activate DB
+        DB --> Service : Bokning och exemplar
+        deactivate DB
+
+        alt Bokningen är inte längre bekräftad
+            Service --> System : Utlämning nekas
+            System --> Personal : Visa "Bokningen kan inte lämnas ut"
+
+        else Bokningen är fortfarande bekräftad
+
+            alt Exemplaret tillhör inte bokningen
+                Service --> System : Fel exemplar
+                System --> Personal : Visa "Fel utrustning för bokningen"
+
+            else Exemplaret tillhör bokningen
+
+                == 4. Spara utlämningen ==
+
+                Service -> DB : Spara utlämning och uppdatera status
+                activate DB
+
+                note right of DB
+                  Registrera bokning,
+                  inventarienummer och personalId.
+
+                  Uppdatera bokningens status
+                  till CheckedOut.
+
+                  Båda ändringarna sparas
+                  i samma transaktion.
+                end note
+
+                DB --> Service : Resultat av registreringen
+                deactivate DB
+
+                alt Registreringen lyckades
+                    Service --> System : Utlämning registrerad
+                    System --> Personal : Visa bekräftelse på utlämning
+
+                else Registreringen misslyckades
+                    Service --> System : Registreringen misslyckades
+                    System --> Personal : Visa "Utlämningen kunde inte registreras"
+                end
+
+            end
+        end
+
+        deactivate Service
+    end
+end
+
+deactivate System
+
+@enduml
