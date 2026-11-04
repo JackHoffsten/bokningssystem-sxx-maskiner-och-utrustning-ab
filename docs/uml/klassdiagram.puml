@@ -1,5 +1,6 @@
 @startuml
 title Bokningssystem SXX Maskiner och Utrustning AB - Klassdiagram
+
 skinparam classAttributeIconSize 0
 skinparam packageStyle rectangle
 hide empty members
@@ -8,6 +9,8 @@ package "API" {
   class BookingController {
     - bookingService : BookingService
     + CreateBooking(request : CreateBookingRequest) : ActionResult<BookingResult>
+    + GetMyBookings() : ActionResult<List<Booking>>
+    + CancelBooking(bookingId : Guid) : ActionResult<CancellationResult>
   }
 }
 
@@ -26,6 +29,20 @@ package "Application" {
     + Error : BookingError?
   }
 
+  class CancellationResult {
+    + Success : bool
+    + Message : string
+    + Error : CancellationError?
+  }
+
+  enum CancellationError {
+    NotFound
+    AlreadyCancelled
+    RentalStarted
+    TooLate
+    SaveFailed
+  }
+
   class BookingService {
     - bookingRepository : IBookingRepository
     - timeProvider : TimeProvider
@@ -33,11 +50,18 @@ package "Application" {
     - ValidateBookingPeriod(startDate : DateOnly, endDate : DateOnly) : bool
     - FindAvailableItem(availability : BookingAvailability, customerId : Guid, request : CreateBookingRequest) : EquipmentItem?
     - GenerateBookingNumber() : string
+
+    + GetCustomerBookings(customerId : Guid) : IReadOnlyList<Booking>
+    + CancelBooking(customerId : Guid, bookingId : Guid) : CancellationResult
   }
 
   interface IBookingRepository {
     + GetItemsAndBookings(modelId : Guid) : BookingAvailability
     + TrySaveBooking(booking : Booking) : bool
+
+    + GetByCustomerId(customerId : Guid) : IReadOnlyList<Booking>
+    + GetById(bookingId : Guid) : Booking?
+    + UpdateBooking(booking : Booking) : bool
   }
 
   class BookingAvailability {
@@ -54,8 +78,13 @@ package "Application" {
 package "Domain" {
   class Customer {
     + Id : Guid
-    + Customer(id : Guid)
+    + Name : string
+    + OrganizationNumber : string
+    + Email : string
+    + PhoneNumber : string
+    + Customer(id : Guid, name : string, organizationNumber : string, email : string, phoneNumber : string)
   }
+
   class EquipmentModel {
     + Id : Guid
     + Name : string
@@ -64,6 +93,7 @@ package "Domain" {
     + DailyPrice : decimal
     + EquipmentModel(id : Guid, name : string, description : string, category : string, dailyPrice : decimal)
   }
+
   class EquipmentItem {
     + Id : Guid
     + InventoryNumber : string
@@ -71,6 +101,7 @@ package "Domain" {
     + IsBookable : bool
     + EquipmentItem(id : Guid, inventoryNumber : string, equipmentModelId : Guid, isBookable : bool = true)
   }
+
   class Booking {
     + Id : Guid
     + BookingNumber : string
@@ -83,6 +114,7 @@ package "Domain" {
     + Booking(id : Guid, bookingNumber : string, customerId : Guid, equipmentItemId : Guid, startDate : DateOnly, endDate : DateOnly, agreedTotalPrice : decimal, status : BookingStatus = Confirmed)
     + BlocksPeriodFor(customerId : Guid, startDate : DateOnly, endDate : DateOnly) : bool
   }
+
   enum BookingStatus {
     Confirmed
     Cancelled
@@ -95,25 +127,36 @@ package "Infrastructure" {
   class BookingRepository {
     + GetItemsAndBookings(modelId : Guid) : BookingAvailability
     + TrySaveBooking(booking : Booking) : bool
-  }
 
+    + GetByCustomerId(customerId : Guid) : IReadOnlyList<Booking>
+    + GetById(bookingId : Guid) : Booking?
+    + UpdateBooking(booking : Booking) : bool
+  }
 }
 
 BookingController --> BookingService
 BookingController ..> CreateBookingRequest
 BookingController ..> BookingResult
+BookingController ..> CancellationResult
+
 BookingService --> IBookingRepository
 BookingService ..> CreateBookingRequest
 BookingService ..> BookingResult
-BookingResult --> "0..1" Booking
-BookingRepository ..|> IBookingRepository
-BookingService ..> Booking : skapar
+BookingService ..> CancellationResult
+BookingService ..> Booking : skapar och avbokar
 BookingService ..> BookingAvailability
+
+BookingResult --> "0..1" Booking
+CancellationResult --> CancellationError
+
+BookingRepository ..|> IBookingRepository
 BookingRepository ..> Booking : kontrollerar och sparar
 BookingRepository ..> EquipmentItem : hämtar
+
 Customer "1" -- "0..*" Booking : gör
 EquipmentModel "1" -- "0..*" EquipmentItem : har
 EquipmentItem "1" -- "0..*" Booking : bokas genom
+
 Booking --> BookingStatus
 
 @enduml
