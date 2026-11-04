@@ -1,0 +1,84 @@
+
+@startuml
+title US-34 - Registrera utlämning (inkl. US-35 och US-36)
+
+skinparam shadowing false
+
+|Personal|
+start
+:Sök efter kundens bokning;
+
+|Bokningssystem|
+:Hämta bokningen;
+
+if (Finns bokningen?) then (Ja)
+
+  :Kontrollera bokningens status;
+
+  if (Är bokningen bekräftad?) then (Ja)
+
+    |Personal|
+    :Ange inventarienummer
+    för utrustningen som lämnas ut;
+
+    |Bokningssystem|
+    :Kontrollera att exemplaret
+    tillhör bokningen;
+
+    if (Rätt exemplar?) then (Ja)
+
+      :Identifiera inloggad personal;
+
+      :Sammanställ utlämningsuppgifter:
+      - Bokning
+      - Inventarienummer
+      - Ansvarig anställd;
+
+      :Registrera utlämningshändelse
+      och uppdatera bokningens
+      status till CheckedOut;
+
+      if (Registreringen lyckades?) then (Ja)
+
+        |Personal|
+        :Ta emot bekräftelse
+        på registrerad utlämning;
+        stop
+
+      else (Nej)
+
+        |Personal|
+        :Ta emot felmeddelande:
+        Utlämningen kunde inte registreras;
+        stop
+
+      endif
+
+    else (Nej)
+
+      |Personal|
+      :Ta emot felmeddelande:
+      Exemplaret tillhör inte bokningen;
+      stop
+
+    endif
+
+  else (Nej)
+
+    |Personal|
+    :Ta emot felmeddelande:
+    Bokningen kan inte lämnas ut;
+    stop
+
+  endif
+
+else (Nej)
+
+  |Personal|
+  :Ta emot felmeddelande:
+  Bokningen hittades inte;
+  stop
+
+endif
+
+@enduml
