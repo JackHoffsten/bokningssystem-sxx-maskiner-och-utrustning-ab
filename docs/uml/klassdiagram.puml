@@ -8,9 +8,12 @@ hide empty members
 package "API" {
   class BookingController {
     - bookingService : BookingService
+    - checkoutService : CheckoutService
     + CreateBooking(request : CreateBookingRequest) : ActionResult<BookingResult>
     + GetMyBookings() : ActionResult<List<Booking>>
     + CancelBooking(bookingId : Guid) : ActionResult<CancellationResult>
+    + GetBooking(bookingNumber : string) : ActionResult<Booking>
+    + RegisterCheckout(bookingNumber : string, inventoryNumber : string) : ActionResult<CheckoutResult>
   }
 }
 
@@ -43,6 +46,11 @@ package "Application" {
     SaveFailed
   }
 
+  class CheckoutResult {
+    + Success : bool
+    + Message : string
+  }
+
   class BookingService {
     - bookingRepository : IBookingRepository
     - timeProvider : TimeProvider
@@ -53,6 +61,13 @@ package "Application" {
 
     + GetCustomerBookings(customerId : Guid) : IReadOnlyList<Booking>
     + CancelBooking(customerId : Guid, bookingId : Guid) : CancellationResult
+
+    + GetBooking(bookingNumber : string) : Booking?
+  }
+
+  class CheckoutService {
+    - bookingRepository : IBookingRepository
+    + RegisterCheckout(bookingNumber : string, inventoryNumber : string, personalId : Guid) : CheckoutResult
   }
 
   interface IBookingRepository {
@@ -62,6 +77,10 @@ package "Application" {
     + GetByCustomerId(customerId : Guid) : IReadOnlyList<Booking>
     + GetById(bookingId : Guid) : Booking?
     + UpdateBooking(booking : Booking) : bool
+
+    + GetBooking(bookingNumber : string) : Booking?
+    + GetEquipmentItem(inventoryNumber : string) : EquipmentItem?
+    + TrySaveCheckout(booking : Booking, checkout : Checkout) : bool
   }
 
   class BookingAvailability {
@@ -83,6 +102,11 @@ package "Domain" {
     + Email : string
     + PhoneNumber : string
     + Customer(id : Guid, name : string, organizationNumber : string, email : string, phoneNumber : string)
+  }
+
+  class Personal {
+    + Id : Guid
+    + Name : string
   }
 
   class EquipmentModel {
@@ -113,6 +137,15 @@ package "Domain" {
     + Status : BookingStatus
     + Booking(id : Guid, bookingNumber : string, customerId : Guid, equipmentItemId : Guid, startDate : DateOnly, endDate : DateOnly, agreedTotalPrice : decimal, status : BookingStatus = Confirmed)
     + BlocksPeriodFor(customerId : Guid, startDate : DateOnly, endDate : DateOnly) : bool
+    + MarkAsCheckedOut() : void
+  }
+
+  class Checkout {
+    + Id : Guid
+    + BookingId : Guid
+    + EquipmentItemId : Guid
+    + PersonalId : Guid
+    + CheckedOutAt : DateTimeOffset
   }
 
   enum BookingStatus {
@@ -131,32 +164,53 @@ package "Infrastructure" {
     + GetByCustomerId(customerId : Guid) : IReadOnlyList<Booking>
     + GetById(bookingId : Guid) : Booking?
     + UpdateBooking(booking : Booking) : bool
+
+    + GetBooking(bookingNumber : string) : Booking?
+    + GetEquipmentItem(inventoryNumber : string) : EquipmentItem?
+    + TrySaveCheckout(booking : Booking, checkout : Checkout) : bool
   }
 }
 
+' API till Application
 BookingController --> BookingService
+BookingController --> CheckoutService
 BookingController ..> CreateBookingRequest
 BookingController ..> BookingResult
 BookingController ..> CancellationResult
+BookingController ..> CheckoutResult
 
+' Application
 BookingService --> IBookingRepository
 BookingService ..> CreateBookingRequest
 BookingService ..> BookingResult
 BookingService ..> CancellationResult
-BookingService ..> Booking : skapar och avbokar
+BookingService ..> Booking : skapar, hämtar och avbokar
 BookingService ..> BookingAvailability
+
+CheckoutService --> IBookingRepository
+CheckoutService ..> CheckoutResult
+CheckoutService ..> Booking : kontrollerar status
+CheckoutService ..> EquipmentItem : kontrollerar exemplar
+CheckoutService ..> Checkout : skapar
 
 BookingResult --> "0..1" Booking
 CancellationResult --> CancellationError
 
+' Infrastructure
 BookingRepository ..|> IBookingRepository
-BookingRepository ..> Booking : kontrollerar och sparar
+BookingRepository ..> Booking : hämtar och sparar
 BookingRepository ..> EquipmentItem : hämtar
+BookingRepository ..> Checkout : sparar
 
+' Domain
 Customer "1" -- "0..*" Booking : gör
 EquipmentModel "1" -- "0..*" EquipmentItem : har
 EquipmentItem "1" -- "0..*" Booking : bokas genom
 
 Booking --> BookingStatus
+
+Booking "1" -- "0..1" Checkout : har utlämning
+EquipmentItem "1" -- "0..*" Checkout : lämnas ut
+Personal "1" -- "0..*" Checkout : registrerar
 
 @enduml
