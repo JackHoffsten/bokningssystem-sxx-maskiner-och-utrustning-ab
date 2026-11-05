@@ -1,0 +1,104 @@
+@startuml
+title US-37 - Registrera återlämning (inkl. US-38 och US-39)
+
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+autonumber
+
+actor "Personal" as Personal
+participant "Bokningssystem" as System
+participant "ReturnService" as Service
+database "Databas" as DB
+
+== 1. Sök efter bokning ==
+
+Personal -> System : Sök bokning(bokningsnummer)
+activate System
+
+System -> Service : GetBooking(bokningsnummer)
+activate Service
+
+Service -> DB : Hämta bokning(bokningsnummer)
+activate DB
+DB --> Service : Booking eller null
+deactivate DB
+
+Service --> System : Booking eller null
+deactivate Service
+
+alt Bokningen saknas
+    System --> Personal : Visa "Bokningen hittades inte"
+
+else Bokningen finns
+    System --> Personal : Visa bokningsuppgifter
+
+    alt Status är inte CheckedOut
+        System --> Personal : Visa "Uthyrningen är inte påbörjad"
+
+    else Status är CheckedOut
+
+        == 2. Bekräfta återlämning ==
+
+        Personal -> System : Bekräfta återlämning
+
+        note over System
+          PersonalId hämtas från
+          den inloggade användaren.
+        end note
+
+        System -> Service : RegisterReturn(bokningsnummer, personalId)
+        activate Service
+
+        Service -> DB : Hämta aktuell bokning
+        activate DB
+        DB --> Service : Booking
+        deactivate DB
+
+        alt Status är inte längre CheckedOut
+            Service --> System : Återlämning nekas
+            System --> Personal : Visa felmeddelande
+
+        else Status är fortfarande CheckedOut
+
+            == 3. Registrera återlämning ==
+
+            note over Service
+              Skapa Return-händelse med:
+              BookingId
+              PersonalId
+              ReturnedAt
+
+              Behåll AgreedTotalPrice
+              oförändrat.
+            end note
+
+            Service -> DB : TrySaveReturn(booking, returnEvent)
+            activate DB
+
+            note right of DB
+              Spara återlämningshändelsen
+              och uppdatera bokningsstatus
+              till Returned i samma
+              transaktion.
+            end note
+
+            DB --> Service : true eller false
+            deactivate DB
+
+            alt Registreringen lyckades
+                Service --> System : ReturnResult(Success)
+                System --> Personal : Visa bekräftelse
+
+            else Registreringen misslyckades
+                Service --> System : ReturnResult(Failure)
+                System --> Personal : Visa felmeddelande
+            end
+        end
+
+        deactivate Service
+    end
+end
+
+deactivate System
+
+@enduml

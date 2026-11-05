@@ -1,0 +1,78 @@
+@startuml
+title US-37 - Registrera återlämning (inkl. US-38 och US-39)
+
+skinparam shadowing false
+skinparam activity {
+  BackgroundColor #F4F7FB
+  BorderColor #34495E
+  FontColor #253444
+  DiamondBackgroundColor #FFF0CD
+  DiamondBorderColor #B7791F
+  ArrowColor #526579
+}
+
+|Personal|
+start
+:Sök bokning med bokningsnummer;
+
+|System|
+:Hämta bokning;
+
+if (Finns bokningen?) then (Nej)
+  :Visa "Bokningen hittades inte";
+  stop
+else (Ja)
+  :Visa bokningsuppgifter;
+endif
+
+if (Har bokningen status CheckedOut?) then (Nej)
+  :Visa "Uthyrningen är inte påbörjad";
+  stop
+else (Ja)
+  |Personal|
+  :Bekräfta återlämning;
+endif
+
+|System|
+:Hämta PersonalId från inloggad personal;
+:Hämta aktuell bokningsstatus;
+
+if (Fortfarande CheckedOut?) then (Nej)
+  :Visa "Uthyrningen kan inte återlämnas";
+  stop
+else (Ja)
+  :Skapa återlämningshändelse;
+endif
+
+:Koppla BookingId och PersonalId;
+:Registrera återlämningstid;
+
+note right
+  US-38:
+  Ansvarig anställd kopplas
+  till återlämningshändelsen.
+end note
+
+:Behåll AgreedTotalPrice oförändrat;
+
+note right
+  US-39:
+  Tidig återlämning ändrar
+  inte avtalat totalpris.
+end note
+
+:Förbered statusändring till Returned;
+:Spara återlämning och statusändring
+i samma transaktion;
+
+if (Lyckades registreringen?) then (Ja)
+  :Visa bekräftelse;
+  :Återlämningshändelsen finns
+  sparad i historiken;
+else (Nej)
+  :Visa felmeddelande;
+  :Behåll tidigare bokningsstatus;
+endif
+
+stop
+@enduml

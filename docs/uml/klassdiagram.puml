@@ -9,11 +9,14 @@ package "API" {
   class BookingController {
     - bookingService : BookingService
     - checkoutService : CheckoutService
+    - returnService : ReturnService
+
     + CreateBooking(request : CreateBookingRequest) : ActionResult<BookingResult>
     + GetMyBookings() : ActionResult<List<Booking>>
     + CancelBooking(bookingId : Guid) : ActionResult<CancellationResult>
     + GetBooking(bookingNumber : string) : ActionResult<Booking>
     + RegisterCheckout(bookingNumber : string, inventoryNumber : string) : ActionResult<CheckoutResult>
+    + RegisterReturn(bookingNumber : string) : ActionResult<ReturnResult>
   }
 }
 
@@ -51,9 +54,28 @@ package "Application" {
     + Message : string
   }
 
+  class ReturnResult {
+    + Success : bool
+    + Message : string
+    + Error : ReturnError?
+  }
+
+  enum ReturnError {
+    NotFound
+    InvalidStatus
+    SaveFailed
+  }
+
+  enum ReturnSaveResult {
+    Success
+    InvalidStatus
+    SaveFailed
+  }
+
   class BookingService {
     - bookingRepository : IBookingRepository
     - timeProvider : TimeProvider
+
     + CreateBooking(customerId : Guid, request : CreateBookingRequest) : BookingResult
     - ValidateBookingPeriod(startDate : DateOnly, endDate : DateOnly) : bool
     - FindAvailableItem(availability : BookingAvailability, customerId : Guid, request : CreateBookingRequest) : EquipmentItem?
@@ -61,13 +83,21 @@ package "Application" {
 
     + GetCustomerBookings(customerId : Guid) : IReadOnlyList<Booking>
     + CancelBooking(customerId : Guid, bookingId : Guid) : CancellationResult
-
     + GetBooking(bookingNumber : string) : Booking?
   }
 
   class CheckoutService {
     - bookingRepository : IBookingRepository
+
     + RegisterCheckout(bookingNumber : string, inventoryNumber : string, personalId : Guid) : CheckoutResult
+  }
+
+  class ReturnService {
+    - bookingRepository : IBookingRepository
+    - timeProvider : TimeProvider
+
+    + GetBooking(bookingNumber : string) : Booking?
+    + RegisterReturn(bookingNumber : string, personalId : Guid) : ReturnResult
   }
 
   interface IBookingRepository {
@@ -81,6 +111,9 @@ package "Application" {
     + GetBooking(bookingNumber : string) : Booking?
     + GetEquipmentItem(inventoryNumber : string) : EquipmentItem?
     + TrySaveCheckout(booking : Booking, checkout : Checkout) : bool
+
+    + TrySaveReturn(booking : Booking, returnEvent : Return) : ReturnSaveResult
+    + GetReturnByBookingId(bookingId : Guid) : Return?
   }
 
   class BookingAvailability {
@@ -135,9 +168,11 @@ package "Domain" {
     + EndDate : DateOnly
     + AgreedTotalPrice : decimal
     + Status : BookingStatus
+
     + Booking(id : Guid, bookingNumber : string, customerId : Guid, equipmentItemId : Guid, startDate : DateOnly, endDate : DateOnly, agreedTotalPrice : decimal, status : BookingStatus = Confirmed)
     + BlocksPeriodFor(customerId : Guid, startDate : DateOnly, endDate : DateOnly) : bool
     + MarkAsCheckedOut() : void
+    + MarkAsReturned() : void
   }
 
   class Checkout {
@@ -146,6 +181,13 @@ package "Domain" {
     + EquipmentItemId : Guid
     + PersonalId : Guid
     + CheckedOutAt : DateTimeOffset
+  }
+
+  class Return {
+    + Id : Guid
+    + BookingId : Guid
+    + PersonalId : Guid
+    + ReturnedAt : DateTimeOffset
   }
 
   enum BookingStatus {
@@ -168,16 +210,22 @@ package "Infrastructure" {
     + GetBooking(bookingNumber : string) : Booking?
     + GetEquipmentItem(inventoryNumber : string) : EquipmentItem?
     + TrySaveCheckout(booking : Booking, checkout : Checkout) : bool
+
+    + TrySaveReturn(booking : Booking, returnEvent : Return) : ReturnSaveResult
+    + GetReturnByBookingId(bookingId : Guid) : Return?
   }
 }
 
-' API till Application
+' API
 BookingController --> BookingService
 BookingController --> CheckoutService
+BookingController --> ReturnService
+
 BookingController ..> CreateBookingRequest
 BookingController ..> BookingResult
 BookingController ..> CancellationResult
 BookingController ..> CheckoutResult
+BookingController ..> ReturnResult
 
 ' Application
 BookingService --> IBookingRepository
@@ -193,14 +241,22 @@ CheckoutService ..> Booking : kontrollerar status
 CheckoutService ..> EquipmentItem : kontrollerar exemplar
 CheckoutService ..> Checkout : skapar
 
+ReturnService --> IBookingRepository
+ReturnService ..> ReturnResult
+ReturnService ..> Booking : kontrollerar status
+ReturnService ..> Return : skapar
+
 BookingResult --> "0..1" Booking
 CancellationResult --> CancellationError
+ReturnResult --> ReturnError
 
 ' Infrastructure
 BookingRepository ..|> IBookingRepository
 BookingRepository ..> Booking : hämtar och sparar
 BookingRepository ..> EquipmentItem : hämtar
 BookingRepository ..> Checkout : sparar
+BookingRepository ..> Return : sparar och hämtar
+BookingRepository ..> ReturnSaveResult : returnerar
 
 ' Domain
 Customer "1" -- "0..*" Booking : gör
@@ -212,5 +268,31 @@ Booking --> BookingStatus
 Booking "1" -- "0..1" Checkout : har utlämning
 EquipmentItem "1" -- "0..*" Checkout : lämnas ut
 Personal "1" -- "0..*" Checkout : registrerar
+
+Booking "1" -- "0..1" Return : har återlämning
+Personal "1" -- "0..*" Return : tar emot
+
+note right of ReturnService
+  US-37:
+  Endast bokningar med status
+  CheckedOut får återlämnas.
+
+  US-38:
+  PersonalId kommer från
+  inloggad personal.
+
+  US-39:
+  AgreedTotalPrice ändras inte
+  vid tidig återlämning.
+end note
+
+note right of BookingRepository
+  TrySaveReturn kontrollerar
+  status atomärt och sparar
+  återlämning samt status Returned
+  i samma transaktion.
+
+  Vid fel sparas inga ändringar.
+end note
 
 @enduml
