@@ -1,14 +1,57 @@
 @startuml
 title SXX Bokningssystem - Förenklat klassdiagram
 
+top to bottom direction
+
 skinparam shadowing false
 skinparam classAttributeIconSize 0
 skinparam packageStyle rectangle
 skinparam linetype ortho
-skinparam nodesep 45
-skinparam ranksep 55
+skinparam nodesep 35
+skinparam ranksep 45
+skinparam defaultFontSize 14
+skinparam roundcorner 10
 
-left to right direction
+' ==========================
+' API
+' ==========================
+
+package "API" #E8EAF6 {
+    class BookingController {
+        + CreateBooking()
+        + CancelBooking()
+        + RegisterCheckout()
+        + RegisterReturn()
+    }
+}
+
+' ==========================
+' APPLICATION
+' ==========================
+
+package "Application - Systemets funktioner" #EAFBEF {
+
+    class BookingService {
+        + CreateBooking()
+        + GetCustomerBookings()
+        + CancelBooking()
+    }
+
+    class CheckoutService {
+        + RegisterCheckout()
+    }
+
+    class ReturnService {
+        + RegisterReturn()
+    }
+
+    BookingService -[hidden]right- CheckoutService
+    CheckoutService -[hidden]right- ReturnService
+}
+
+' ==========================
+' DOMAIN
+' ==========================
 
 package "Domain - Verksamheten" #EAF4FF {
 
@@ -34,13 +77,6 @@ package "Domain - Verksamheten" #EAF4FF {
         + Status : BookingStatus
     }
 
-    enum BookingStatus {
-        Confirmed
-        Cancelled
-        CheckedOut
-        Returned
-    }
-
     class Personal {
         + Name : string
     }
@@ -52,60 +88,42 @@ package "Domain - Verksamheten" #EAF4FF {
     class Return {
         + ReturnedAt : DateTimeOffset
     }
+
+    ' Verksamhetens relationer
+
+    EquipmentModel "1" -- "0..*" EquipmentItem
+    EquipmentItem "1" -- "0..*" Booking
+    Customer "1" -- "0..*" Booking
+
+    Booking "1" -- "0..1" Checkout
+    Booking "1" -- "0..1" Return
+
+    Personal "1" -- "0..*" Checkout
+    Personal "1" -- "0..*" Return
 }
 
-package "Application - Systemets funktioner" #EAFBEF {
-
-    class BookingService {
-        + CreateBooking()
-        + GetCustomerBookings()
-        + CancelBooking()
-    }
-
-    class CheckoutService {
-        + RegisterCheckout()
-    }
-
-    class ReturnService {
-        + RegisterReturn()
-    }
-}
+' ==========================
+' INFRASTRUCTURE
+' ==========================
 
 package "Infrastructure - Lagring" #FFF4E5 {
 
     interface IBookingRepository
-
     class BookingRepository
+
+    BookingRepository ..|> IBookingRepository
 }
 
-' Verksamhetens relationer
+' ==========================
+' KOPPLINGAR MELLAN LAGER
+' ==========================
 
-Customer "1" -- "0..*" Booking : gör
-
-EquipmentModel "1" -- "0..*" EquipmentItem : har
-
-EquipmentItem "1" -- "0..*" Booking : bokas genom
-
-Booking "1" -- "0..1" Checkout : utlämning
-
-Booking "1" -- "0..1" Return : återlämning
-
-Personal "1" -- "0..*" Checkout : lämnar ut
-
-Personal "1" -- "0..*" Return : tar emot
-
-Booking --> BookingStatus
-
-' Systemets funktioner
-
-BookingService ..> Booking : hanterar
-CheckoutService ..> Checkout : skapar
-ReturnService ..> Return : skapar
+BookingController --> BookingService
+BookingController --> CheckoutService
+BookingController --> ReturnService
 
 BookingService --> IBookingRepository
 CheckoutService --> IBookingRepository
 ReturnService --> IBookingRepository
-
-BookingRepository ..|> IBookingRepository
 
 @enduml
