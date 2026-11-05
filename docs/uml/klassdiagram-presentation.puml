@@ -1,1 +1,111 @@
+@startuml
+title SXX Bokningssystem - Förenklat klassdiagram
 
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam linetype ortho
+skinparam nodesep 45
+skinparam ranksep 55
+
+left to right direction
+
+package "Domain - Verksamheten" #EAF4FF {
+
+    class Customer {
+        + Name : string
+    }
+
+    class EquipmentModel {
+        + Name : string
+        + DailyPrice : decimal
+    }
+
+    class EquipmentItem {
+        + InventoryNumber : string
+        + IsBookable : bool
+    }
+
+    class Booking {
+        + BookingNumber : string
+        + StartDate : DateOnly
+        + EndDate : DateOnly
+        + AgreedTotalPrice : decimal
+        + Status : BookingStatus
+    }
+
+    enum BookingStatus {
+        Confirmed
+        Cancelled
+        CheckedOut
+        Returned
+    }
+
+    class Personal {
+        + Name : string
+    }
+
+    class Checkout {
+        + CheckedOutAt : DateTimeOffset
+    }
+
+    class Return {
+        + ReturnedAt : DateTimeOffset
+    }
+}
+
+package "Application - Systemets funktioner" #EAFBEF {
+
+    class BookingService {
+        + CreateBooking()
+        + GetCustomerBookings()
+        + CancelBooking()
+    }
+
+    class CheckoutService {
+        + RegisterCheckout()
+    }
+
+    class ReturnService {
+        + RegisterReturn()
+    }
+}
+
+package "Infrastructure - Lagring" #FFF4E5 {
+
+    interface IBookingRepository
+
+    class BookingRepository
+}
+
+' Verksamhetens relationer
+
+Customer "1" -- "0..*" Booking : gör
+
+EquipmentModel "1" -- "0..*" EquipmentItem : har
+
+EquipmentItem "1" -- "0..*" Booking : bokas genom
+
+Booking "1" -- "0..1" Checkout : utlämning
+
+Booking "1" -- "0..1" Return : återlämning
+
+Personal "1" -- "0..*" Checkout : lämnar ut
+
+Personal "1" -- "0..*" Return : tar emot
+
+Booking --> BookingStatus
+
+' Systemets funktioner
+
+BookingService ..> Booking : hanterar
+CheckoutService ..> Checkout : skapar
+ReturnService ..> Return : skapar
+
+BookingService --> IBookingRepository
+CheckoutService --> IBookingRepository
+ReturnService --> IBookingRepository
+
+BookingRepository ..|> IBookingRepository
+
+@enduml
