@@ -19,17 +19,25 @@ public class Booking
     {
         if (id == Guid.Empty)
             throw new ArgumentException("Bokningens id måste anges.", nameof(id));
+
         if (customerId == Guid.Empty)
             throw new ArgumentException("Bokningen måste tillhöra en kund.", nameof(customerId));
+
         if (equipmentItemId == Guid.Empty)
             throw new ArgumentException("Bokningen måste gälla ett exemplar.", nameof(equipmentItemId));
+
         ArgumentException.ThrowIfNullOrWhiteSpace(bookingNumber);
+
         if (endDate < startDate)
             throw new ArgumentException("Slutdatum får inte vara före startdatum.", nameof(endDate));
+
         if (agreedTotalPrice < 0)
-            throw new ArgumentOutOfRangeException(nameof(agreedTotalPrice), "Totalpriset får inte vara negativt.");
+            throw new ArgumentOutOfRangeException(nameof(agreedTotalPrice),
+                "Totalpriset får inte vara negativt.");
+
         if (!Enum.IsDefined(status))
-            throw new ArgumentOutOfRangeException(nameof(status), "Bokningsstatusen är ogiltig.");
+            throw new ArgumentOutOfRangeException(nameof(status),
+                "Bokningsstatusen är ogiltig.");
 
         Id = id;
         BookingNumber = bookingNumber;
@@ -41,13 +49,28 @@ public class Booking
         Status = status;
     }
 
+    // F05 - Avboka en bekräftad bokning
+    public bool Cancel()
+    {
+        // Endast bekräftade bokningar får avbokas.
+        if (Status != BookingStatus.Confirmed)
+            return false;
+
+        // Ändra bokningens status.
+        Status = BookingStatus.Cancelled;
+
+        return true;
+    }
+
     public bool BlocksPeriodFor(Guid customerId, DateOnly startDate, DateOnly endDate)
     {
         if (customerId == Guid.Empty)
             throw new ArgumentException("Kundens id måste anges.", nameof(customerId));
+
         if (endDate < startDate)
             throw new ArgumentException("Slutdatum får inte vara före startdatum.", nameof(endDate));
 
+        // Avbokade bokningar blockerar inte utrustningen.
         if (Status == BookingStatus.Cancelled)
             return false;
 
