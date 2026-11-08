@@ -5,3 +5,4 @@
 /docs/US-16/
 *.user
 *.suo
+.DS_Store
