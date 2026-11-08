@@ -1,0 +1,56 @@
+
+@startuml
+title SXX Maskiner & Utrustning AB - Användningsfallsdiagram
+
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+
+actor "Kund" as Kund
+actor "Personal" as Personal
+actor "Administratör" as Admin
+
+rectangle "SXX Bokningssystem" {
+
+  usecase "Visa utrustningskatalog" as UC1
+  usecase "Registrera kundkonto" as UC2
+  usecase "Logga in" as UC3
+  usecase "Boka utrustning" as UC5
+  usecase "Visa egna bokningar" as UC6
+  usecase "Avboka bokning" as UC7
+
+  usecase "Söka bokningar" as UC8
+  usecase "Boka åt kund" as UC9
+  usecase "Registrera utlämning" as UC10
+  usecase "Registrera återlämning" as UC11
+  usecase "Markera exemplar otillgängligt" as UC12
+  usecase "Hantera påverkade bokningar" as UC13
+  usecase "Tilldela ersättningsexemplar" as UC14
+
+  usecase "Administrera utrustning" as UC15
+  usecase "Uppdatera dagspriser" as UC16
+  usecase "Hantera personalbehörigheter" as UC17
+}
+
+Kund -- UC1
+Kund -- UC2
+Kund -- UC3
+Kund -- UC5
+Kund -- UC6
+Kund -- UC7
+
+Personal -- UC3
+Personal -- UC8
+Personal -- UC9
+Personal -- UC10
+Personal -- UC11
+Personal -- UC12
+Personal -- UC13
+Personal -- UC14
+
+Admin -- UC3
+Admin -- UC15
+Admin -- UC16
+Admin -- UC17
+
+@enduml
